@@ -29,7 +29,6 @@ app.get('/', (req, res) => {
   res.send('API de Usuários e Avaliações funcionando!');
 });
 
-
 // Criar uma avaliação
 app.post('/avaliacoes', async (req, res) => {
   try {
@@ -45,8 +44,8 @@ app.post('/avaliacoes', async (req, res) => {
 app.get('/avaliacoes', async (req, res) => {
   try {
     const avaliacoes = await Avaliacao.find()
-      .populate('restaurante', 'nome') // Popula o nome do restaurante
-      .populate('usuario', 'nome'); // Popula o nome do usuário
+      .populate('restaurante', 'nome')
+      .populate('usuario', 'nome');
     res.json(avaliacoes);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -124,7 +123,7 @@ app.get('/restaurantes/:id', async (req, res) => {
   try {
     const restaurante = await Restaurante.findById(req.params.id).populate({
       path: 'avaliacoes',
-      populate: { path: 'usuario', select: 'nome' }, // Popula o usuário das avaliações
+      populate: { path: 'usuario', select: 'nome' },
     });
     if (!restaurante) {
       return res.status(404).json({ message: 'Restaurante não encontrado' });
@@ -165,98 +164,67 @@ app.delete('/restaurantes/:id', async (req, res) => {
   }
 });
 
-
-// Registrar um novo usuário
-app.post('/usuarios/registro', async (req, res) => {
+// Registrar um novo restaurante
+app.post('/restaurantes/registro', async (req, res) => {
   try {
-    const usuario = new Usuario(req.body);
-    const novoUsuario = await usuario.save();
-    res.status(201).json(novoUsuario);
+    const { nome, email, senha, telefone, endereco, categoria } = req.body;
+
+    // Verificar se o nome já está em uso
+    const restauranteExistente = await Restaurante.findOne({ nome });
+    if (restauranteExistente) {
+      return res.status(400).json({ error: 'Nome já está em uso' });
+    }
+
+    // Verificar se o email já está em uso
+    const emailExistente = await Restaurante.findOne({ email });
+    if (emailExistente) {
+      return res.status(400).json({ error: 'Email já está em uso' });
+    }
+
+    // Criar um novo restaurante
+    const novoRestaurante = new Restaurante({
+      nome,
+      email,
+      senha, // A senha será hashed no middleware pre-save
+      telefone,
+      endereco,
+      categoria,
+    });
+
+    // Salvar o restaurante no banco de dados
+    await novoRestaurante.save();
+
+    // Retornar a resposta com o restaurante criado
+    res.status(201).json(novoRestaurante);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// Login de usuário
-app.post('/usuarios/login', async (req, res) => {
+// Login de restaurante
+app.post('/restaurantes/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    // Verificar se o usuário existe
-    const usuario = await Usuario.findOne({ email });
-    if (!usuario) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+    // Verificar se o restaurante existe
+    const restaurante = await Restaurante.findOne({ email });
+    if (!restaurante) {
+      return res.status(404).json({ error: 'Restaurante não encontrado' });
     }
 
     // Verificar se a senha está correta
-    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    const senhaCorreta = await bcrypt.compare(senha, restaurante.senha);
     if (!senhaCorreta) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
     // Gerar um token JWT
-    const token = jwt.sign({ id: usuario._id, email: usuario.email }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: restaurante._id, email: restaurante.email }, JWT_SECRET, { expiresIn: '1h' });
 
-    res.json({ token, usuario });
+    res.json({ token, restaurante });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-
-// Listar todos os usuários
-app.get('/usuarios', async (req, res) => {
-  try {
-    const usuarios = await Usuario.find().populate('avaliacoes');
-    res.json(usuarios);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Obter um usuário por ID
-app.get('/usuarios/:id', async (req, res) => {
-  try {
-    const usuario = await Usuario.findById(req.params.id).populate('avaliacoes');
-    if (!usuario) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-    res.json(usuario);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Atualizar um usuário
-app.put('/usuarios/:id', async (req, res) => {
-  try {
-    const usuarioAtualizado = await Usuario.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!usuarioAtualizado) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-    res.json(usuarioAtualizado);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// Deletar um usuário
-app.delete('/usuarios/:id', async (req, res) => {
-  try {
-    const usuarioDeletado = await Usuario.findByIdAndDelete(req.params.id);
-    if (!usuarioDeletado) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-    res.json({ message: 'Usuário deletado com sucesso' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-
 
 module.exports = app;

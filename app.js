@@ -1,7 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const usuarioRoutes = require('./routes/usuarioRoutes'); // Rotas de usuários e avaliações
-const { addUser, getUsers } = require('./models/Usuario.js');
+const usuarioRoutes = require('./routes/usuarioRoutes'); 
+const Avaliacao = require('./models/Avaliacao'); 
+const Restaurante = require('./models/Restaurante');
 require('dotenv').config({path: './mongoURI.env'});
 
 const app = express();

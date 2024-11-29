@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const usuarioRoutes = require('./routes/usuarioRoutes'); 
+const Usuario = require('./models/Usuario');
 const Avaliacao = require('./models/Avaliacao'); 
 const Restaurante = require('./models/Restaurante');
 require('dotenv').config({path: './mongoURI.env'});

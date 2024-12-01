@@ -92,10 +92,20 @@ const avaliarRestaurante = async (req, res) => {
   }
 };
 
+// Listar todos os Usuários
+const listarUsuarios = async (req, res) => {
+  try {
+    const usuarios = await Usuario.find(); // Busca todos os usuários
+    return res.status(200).json(usuarios); // Retorna os usuários encontrados
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao listar os usuários', detalhes: error.message });
+  }
+};
 // Exporta as funções do controlador
 module.exports = {
   cadastrarUsuario,
   atualizarUsuario,
   deletarUsuario,
   avaliarRestaurante,
+  listarUsuarios, 
 };

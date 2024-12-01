@@ -4,6 +4,8 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 const Usuario = require('./models/Usuario');
 const Avaliacao = require('./models/Avaliacao'); 
 const Restaurante = require('./models/Restaurante');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 require('dotenv').config({path: './mongoURI.env'});
 
 const app = express();
@@ -226,5 +228,84 @@ app.post('/restaurantes/login', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Login de usuário
+app.post('/usuarios/login', async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+
+    // Verificar se o usuário existe
+    const usuario = await Usuario.findOne({ email });
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Verificar se a senha está correta
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaCorreta) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    // Gerar um token JWT
+    const token = jwt.sign({ id: usuario._id, email: usuario.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.json({ token, usuario });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// Cadastro de usuário
+app.post('/usuarios', async (req, res) => {
+  try {
+    const { nome, foto, descricao, email, senha } = req.body;
+
+    const novoUsuario = new Usuario({ nome, foto, descricao, email, senha });
+    await novoUsuario.save();
+
+    return res.status(201).json({ message: 'Usuário cadastrado com sucesso!', usuario: novoUsuario });
+  } catch (error) {
+    return res.status(400).json({ error: 'Erro ao cadastrar o usuário', detalhes: error.message });
+  }
+});
+
+// Atualizar usuário
+app.put('/usuarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const atualizacoes = req.body;
+
+    const usuarioAtualizado = await Usuario.findByIdAndUpdate(id, atualizacoes, { new: true });
+
+    if (!usuarioAtualizado) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.status(200).json({ message: 'Usuário atualizado com sucesso!', usuario: usuarioAtualizado });
+  } catch (error) {
+    return res.status(400).json({ error: 'Erro ao atualizar o usuário', detalhes: error.message });
+  }
+});
+
+// Deletar usuário
+app.delete('/usuarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const usuarioDeletado = await Usuario.findByIdAndDelete(id);
+
+    if (!usuarioDeletado) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    return res.status(200).json({ message: 'Usuário deletado com sucesso!' });
+  } catch (error) {
+    return res.status(400).json({ error: 'Erro ao deletar o usuário', detalhes: error.message });
+  }
+
+});
+
+
 
 module.exports = app;
